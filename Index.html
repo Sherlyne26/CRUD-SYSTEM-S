@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRUD SYSTEM - Inicio</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <h1>CRUD SYSTEM</h1>
+    </header>
+    
+    <nav>
+        <a href="create-products.html">Crear Producto</a>
+        <a href="Products.html">Ver Productos</a>
+    </nav>
+
+    <div class="table-container">
+        <h2>Productos Recientes</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Precio Regular</th>
+                    <th>Precio</th>
+                    <th>Descripción</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+            <tbody id="productsTable">
+                <!-- Los productos se cargarán dinámicamente -->
+            </tbody>
+        </table>
+    </div>
+
+    <script type="module" src="firebase-config.js"></script>
+    <script type="module" src="crud-operations.js"></script>
+    <script type="module">
+        // Función para mostrar los productos
+        async function displayProducts() {
+            try {
+                const products = await getProducts();
+                const tbody = document.getElementById('productsTable');
+                
+                // Ordenar productos por fecha de creación (más recientes primero)
+                products.sort((a, b) => new Date(b.dateCreated) - new Date(a.dateCreated));
+                
+                // Mostrar los primeros 5 productos
+                const recentProducts = products.slice(0, 5);
+                
+                tbody.innerHTML = '';
+                
+                recentProducts.forEach(product => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${product.productName}</td>
+                        <td>$${product.regularPrice.toFixed(2)}</td>
+                        <td>$${product.price.toFixed(2)}</td>
+                        <td>${product.description}</td>
+                        <td>${product.status}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Error al cargar productos:', error);
+                alert('Error al cargar los productos');
+            }
+        }
+
+        // Cargar productos al iniciar la página
+        displayProducts();
+    </script>
+</body>
+</html>

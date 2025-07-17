@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Productos - CRUD SYSTEM</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <h1>CRUD SYSTEM</h1>
+    </header>
+    
+    <nav>
+        <a href="Index.html">Inicio</a>
+        <a href="create-products.html">Crear Producto</a>
+    </nav>
+
+    <div class="table-container">
+        <h2>Lista de Productos</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Precio Regular</th>
+                    <th>Precio</th>
+                    <th>Descripción</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Los datos de los productos se agregarán dinámicamente -->
+            </tbody>
+        </table>
+    </div>
+    <script type="module" src="firebase-config.js"></script>
+    <script type="module" src="crud-operations.js"></script>
+    <script type="module" src="products-list.js"></script>
+</body>
+</html>
