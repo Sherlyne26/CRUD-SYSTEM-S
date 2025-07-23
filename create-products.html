@@ -49,20 +49,198 @@
                 </select>
             </div>
             
+            <div class="form-group">
+                <label for="productImage">Imagen del Producto:</label>
+                <div class="image-upload-container">
+                    <input type="file" id="productImage" name="productImage" accept="image/*" required>
+                    <div class="image-preview" id="imagePreview">
+                        <img src="" alt="Vista previa de la imagen" id="imagePreviewImg">
+                        <span>No hay imagen seleccionada</span>
+                    </div>
+                </div>
+            </div>
+            
             <button type="submit" id="createProductBtn">Crear Producto</button>
         </form>
     </div>
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/11.10.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/11.10.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/11.10.0/firebase-analytics-compat.js"></script>
+    <!-- Firebase SDK v9 (modular) -->
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js';
+        import { getFirestore, collection, addDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js';
+        
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCT8PJNmA1MDs8Mul8g6xEMHQ4U7yOM330",
+            authDomain: "fir-projects-bdcda.firebaseapp.com",
+            projectId: "fir-projects-bdcda",
+            storageBucket: "fir-projects-bdcda.firebasestorage.app",
+            messagingSenderId: "739635413740",
+            appId: "1:739635413740:web:1a4374070854a9182bdbc9",
+            measurementId: "G-HV3P4JE0KH"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        
+        // Make db available globally
+        window.db = db;
+        window.addDoc = addDoc;
+        window.collection = collection;
+        window.serverTimestamp = serverTimestamp;
+    </script>
     
-    <!-- Firebase Config -->
-    <script type="module" src="firebase-config.js"></script>
     <!-- CRUD Operations -->
     <script type="module" src="crud-operations.js"></script>
-    <!-- Form Handler -->
-    <script type="module" src="create-product.js"></script>
+    
+    <script>
+        // Image Preview Functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const imageUpload = document.getElementById('productImage');
+            const imagePreview = document.getElementById('imagePreview');
+            const imagePreviewImg = document.getElementById('imagePreviewImg');
+            const createBtn = document.getElementById('createProductBtn');
+            
+            // Handle click on preview to open file dialog
+            imagePreview.addEventListener('click', function() {
+                imageUpload.click();
+            });
+            
+            // Handle file selection
+            imageUpload.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    // Validate file type
+                    if (!file.type.match('image.*')) {
+                        alert('Por favor seleccione un archivo de imagen válido (JPEG, PNG, etc.)');
+                        return;
+                    }
+                    
+                    // Validate file size (max 5MB)
+                    if (file.size > 5 * 1024 * 1024) {
+                        alert('La imagen no debe pesar más de 5MB');
+                        return;
+                    }
+                    
+                    const reader = new FileReader();
+                    
+                    reader.onload = function(e) {
+                        imagePreviewImg.src = e.target.result;
+                        imagePreview.classList.add('has-image');
+                    };
+                    
+                    reader.readAsDataURL(file);
+                }
+            });
+            
+            // Upload image to imgBB
+            async function uploadImageToImgBB(imageFile) {
+                const formData = new FormData();
+                formData.append('image', imageFile);
+                
+                try {
+                    const response = await fetch('https://api.imgbb.com/1/upload?key=8a8e63e69362444de8894e54956b3adc', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        return data.data.url;
+                    } else {
+                        throw new Error('Error al subir la imagen a imgBB');
+                    }
+                } catch (error) {
+                    console.error('Error al subir la imagen:', error);
+                    throw error;
+                }
+            }
+            
+            // Save product to Firestore
+            async function saveProductToFirestore(productData) {
+                try {
+                    // Add a new document with a generated id using the global db instance
+                    const docRef = await window.addDoc(window.collection(window.db, 'products'), {
+                        ...productData,
+                        createdAt: window.serverTimestamp(),
+                        updatedAt: window.serverTimestamp()
+                    });
+                    
+                    console.log('Producto guardado con ID: ', docRef.id);
+                    return true;
+                } catch (error) {
+                    console.error('Error al guardar el producto: ', error);
+                    throw error;
+                }
+            }
+            
+            // Handle form submission
+            const form = document.getElementById('productForm');
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                // Disable button to prevent multiple submissions
+                createBtn.disabled = true;
+                createBtn.textContent = 'Guardando...';
+                
+                try {
+                    // Get form data
+                    const productName = document.getElementById('productName').value;
+                    const regularPrice = parseFloat(document.getElementById('regularPrice').value);
+                    const price = parseFloat(document.getElementById('price').value);
+                    const description = document.getElementById('description').value;
+                    const status = document.getElementById('status').value;
+                    const imageFile = imageUpload.files[0];
+                    
+                    // Basic validation
+                    if (!productName || isNaN(regularPrice) || isNaN(price) || !description || !status || !imageFile) {
+                        throw new Error('Por favor complete todos los campos obligatorios');
+                    }
+                    
+                    // Show loading state
+                    const originalBtnText = createBtn.textContent;
+                    createBtn.textContent = 'Subiendo imagen...';
+                    
+                    // 1. Upload image to imgBB
+                    const imageUrl = await uploadImageToImgBB(imageFile);
+                    
+                    // 2. Prepare product data
+                    const productData = {
+                        productName,
+                        regularPrice,
+                        price,
+                        description,
+                        status,
+                        imageUrl,
+                        imageName: imageFile.name,
+                        dateCreated: new Date().toISOString()
+                    };
+                    
+                    // 3. Save product to Firestore
+                    createBtn.textContent = 'Guardando producto...';
+                    await saveProductToFirestore(productData);
+                    
+                    // 4. Show success message and reset form
+                    alert('¡Producto creado exitosamente!');
+                    form.reset();
+                    imagePreview.classList.remove('has-image');
+                    imagePreviewImg.src = '';
+                    
+                    // Redirect to products page or stay on form
+                    window.location.href = 'Products.html';
+                    
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert(error.message || 'Ocurrió un error al guardar el producto');
+                } finally {
+                    // Re-enable button
+                    createBtn.disabled = false;
+                    createBtn.textContent = 'Crear Producto';
+                }
+            });
+        });
+    </script>
 </body>
 </html>
